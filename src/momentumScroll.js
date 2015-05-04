@@ -21,6 +21,11 @@ angular.module('ui-momentum-scroll', [])
  *   <div style="width:1000px">..scroll content..</div>
  * </div>
  *
+ * # If use "-webkit-overflow-scrolling: touch;" (Only iOS device)
+ * <div style="height:100px;overflow:hidden;" momentum-scroll overflow-scrolling-touch>
+ *   <div style="height:1000px">..scroll content..</div>
+ * </div>
+ *
  **/
   .directive('momentumScroll', function ($window) {
 
@@ -31,15 +36,16 @@ angular.module('ui-momentum-scroll', [])
     };
 
     var durationMap = {
-      normal: '.5s',
-      overEdge: '.1s',
-      backEdge: '.2s'
+      normal: '1s',
+      overEdge: '.2s',
+      backEdge: '.3s'
     };
-    var scrollPosMax = 200;
-    var velocityGain = 5;
-    var bouncePos = 50;
+    var scrollPosMax = 500;
+    var velocityGain = 30;
+    var bouncePos = 100;
     var cubicBezier = 'cubic-bezier(0.33, 0.66, 0.66, 1)';
     var transitionEndEventName = _getTransitionEndEventName();
+    var isIOS = /iPhone|iPad/.test($window.navigator.userAgent);
 
     function _link(scope, element, attrs) {
 
@@ -51,7 +57,12 @@ angular.module('ui-momentum-scroll', [])
       var contentScrollTop = 0;
       var contentScrollTopMax = 0;
 
-      if (transitionEndEventName) {
+      if (angular.isDefined(attrs.overflowScrollingTouch) && isIOS) {
+        element.css({
+          overflow: 'scroll',
+          '-webkit-overflow-scrolling': 'touch'
+        });
+      } else if (transitionEndEventName) {
         content.on('touchstart', _onTouchStart);
         content.on('touchmove', _onTouchMove);
         content.on('touchend', _onTouchEnd);

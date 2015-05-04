@@ -22,7 +22,7 @@ angular.module('ui-momentum-scroll', [])
  * </div>
  *
  **/
-  .directive('momentumScroll', function () {
+  .directive('momentumScroll', function ($window) {
 
     var _directive = {
       restrict: 'A',
@@ -39,10 +39,9 @@ angular.module('ui-momentum-scroll', [])
     var velocityGain = 5;
     var bouncePos = 50;
     var cubicBezier = 'cubic-bezier(0.33, 0.66, 0.66, 1)';
+    var transitionEndEventName = _getTransitionEndEventName();
 
     function _link(scope, element, attrs) {
-
-      window.attrs = attrs;
 
       var content = element.children().eq(0);
       var isHorizontalScroll = angular.isDefined(attrs.momentumScrollHorizontal);
@@ -52,9 +51,13 @@ angular.module('ui-momentum-scroll', [])
       var contentScrollTop = 0;
       var contentScrollTopMax = 0;
 
-      content.on('touchstart', _onTouchStart);
-      content.on('touchmove', _onTouchMove);
-      content.on('touchend', _onTouchEnd);
+      if (transitionEndEventName) {
+        content.on('touchstart', _onTouchStart);
+        content.on('touchmove', _onTouchMove);
+        content.on('touchend', _onTouchEnd);
+      } else {
+        element.css('overflow', 'scroll');
+      }
 
       /**
        * touchStart
@@ -74,7 +77,7 @@ angular.module('ui-momentum-scroll', [])
         }
         contentScrollTopMax = contentHeight - wrapperHeight;
 
-        content.off('webkitTransitionEnd transitionend');
+        content.off(transitionEndEventName);
       }
 
       /**
@@ -105,8 +108,6 @@ angular.module('ui-momentum-scroll', [])
        * touchEnd
        */
       function _onTouchEnd() {
-        var duration;
-
         contentScrollTop += diffPos;
 
         if (contentScrollTop > contentScrollTopMax) {
@@ -157,8 +158,8 @@ angular.module('ui-momentum-scroll', [])
           duration = durationMap.overEdge;
         }
 
-        content.on('webkitTransitionEnd transitionend', function () {
-          content.off('webkitTransitionEnd transitionend');
+        content.on(transitionEndEventName, function () {
+          content.off(transitionEndEventName);
 
           // Bounce to bottom edge
           if (contentScrollTop > contentScrollTopMax) {
@@ -181,8 +182,8 @@ angular.module('ui-momentum-scroll', [])
           duration = durationMap.overEdge;
         }
 
-        content.on('webkitTransitionEnd transitionend', function () {
-          content.off('webkitTransitionEnd transitionend');
+        content.on(transitionEndEventName, function () {
+          content.off(transitionEndEventName);
 
           // Bounce to top edge
           if (contentScrollTop < 0) {
@@ -204,6 +205,8 @@ angular.module('ui-momentum-scroll', [])
         var transitionStyle = duration ? ['all', cubicBezier, duration].join(' ') : '';
         var transformStyle = _getTransformValue(nextPos);
         content.css({
+          '-moz-transition': transitionStyle,
+          '-moz-transform': transformStyle,
           '-webkit-transition': transitionStyle,
           '-webkit-transform': transformStyle,
           transition: transitionStyle,
@@ -247,6 +250,28 @@ angular.module('ui-momentum-scroll', [])
           return 'translate3d(' + -1 * nextPos + 'px, 0, 0)';
         } else {
           return 'translate3d(0, ' + -1 * nextPos + 'px, 0)';
+        }
+      }
+    }
+
+    /**
+     * FYI: https://github.com/minimalmonkey/minimalmonkey.github.io/blob/master/_src/js/utils/transitionEndEvent.js
+     * @returns {String}
+     */
+    function _getTransitionEndEventName() {
+
+      var t;
+      var el = $window.document.createElement('fakeelement');
+      var transitions = {
+        transition: 'transitionend',
+        OTransition: 'oTransitionEnd',
+        MozTransition: 'transitionend',
+        WebkitTransition: 'webkitTransitionEnd'
+      };
+
+      for (t in transitions) {
+        if (el.style[t] !== undefined) {
+          return transitions[t];
         }
       }
     }
